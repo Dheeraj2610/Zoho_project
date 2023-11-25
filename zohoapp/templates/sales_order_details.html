@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-
+{% load social_share %}
 {% block content %}
 
 <style>
@@ -85,41 +85,43 @@
   max-height: 130px; /* Maximum height for the tooltip */
   overflow-y: auto; /* Add vertical scrollbar when content overflows */
         }
+        @media (max-width: 768px) {
+  .share-dropdown {
+    display: inline-block;
+  }
+}
+        
 
 </style>
-
-
 <div class="container-fluid">
-    <div class="row">
+  <div class="row align-items-center">
       <div class="col-md-6">
           <form class="form-inline">
-            <label class="mr-2" for="fromdate">From:</label>&nbsp;
-            <input type="date" class="form-control" id="fromdate" style="color: black !important;">
-            <label class="mx-2" for="todate">To:</label>
-            <input type="date" class="form-control" id="todate" style="color: black !important;">
+              <label class="mr-2" for="fromdate">From:</label>&nbsp;
+              <input type="date" class="form-control" id="fromdate" style="color: black !important;">
+              <label class="mx-2" for="todate">To:</label>
+              <input type="date" class="form-control" id="todate" style="color: black !important;">
           </form>
       </div>
-
-      <div class="col-md-6" style="text-align: right;">
-        <a class="btn text-center btn-outline-warning p-2"  onclick="exportAsPDF()" style="margin-right: 2vh;"><i class="fa fa-file-pdf-o" aria-hidden="true"></i>PDF</a>
-
-
-        <a class="btn text-center btn-outline-warning printdrop p-2" href="#" onclick="printPageContent()" style="margin-right: 2vh;"><i class="fa fa-print" aria-hidden="true"></i>Print</a>
-    
-        <a class="btn text-center btn-outline-warning p-2"  onclick="exportAsXLS()" style="margin-right: 2vh;"><i class="fa fa-file-excel-o" aria-hidden="true"></i>EXCEL</a>
-    
-    
-          <a class="btn btn-outline-warning p-2" href="{% url 'report_inventory_view' %}" >&times;</a>
-      </div>
-
+      <div class="col-md-6 d-flex justify-content-end align-items-center position-relative">
+        <a class="btn btn-outline-warning p-2 mr-2" onclick="exportAsPDF()"><i class="fa fa-file-pdf-o" aria-hidden="true"></i>PDF</a>&nbsp;
+        <a class="btn btn-outline-warning p-2 mr-2" href="#" onclick="printPageContent()"><i class="fa fa-print" aria-hidden="true"></i>Print</a>&nbsp;
+        <a class="btn btn-outline-warning p-2 mr-2" onclick="exportAsXLS()"><i class="fa fa-file-excel-o" aria-hidden="true"></i>EXCEL</a>&nbsp;
+        <div class="share-dropdown ">
+            <button class="btn btn-outline-warning p-2 mr-2" title="SHARE"><i class="fa fa-share" aria-hidden="true"></i>Share </button>&nbsp;
+            <ul class="share-dropdown-menu position-absolute" aria-labelledby="navbarDropdown">
+                <li>{% post_to_whatsapp object_or_url "WhatsApp" %}</li>
+                <li>{% send_email object.title "New: {{object.title}}. Check it out!" object_or_url "Email" %}</li>
+            </ul>
+        </div>
+        <a class="btn btn-outline-warning p-2" href="{% url 'report_inventory_view' %}">&times;</a>
     </div>
 
 
-</div>
 
 <div class="row">
   <div class="col-md-4" style="margin-left: 5vh;"><br><br>
-    <input class="form-control text-black" type="text" id="searchInput" placeholder="Search by Name">
+    <input class="form-control text-black" type="text" id="searchInput" placeholder="Search ">
     
     <div id="nameTooltip" >
       <div class="scrollable-tooltip">
@@ -161,7 +163,7 @@
           <th>STATUS 
           </th>
 
-          <th>TOTAL 
+          <th>Amount 
           </th>
           <th>ACTION 
           </th>
@@ -182,7 +184,7 @@
             <td>Sales Order</td>
             {% endif %} -->
             <td>{{ d.status }}</td>
-          <td>{{ d.grandtotal }}</td>
+          <td id="grand">{{ d.grandtotal }}</td>
           {% if d.complete_status == 0 %}
                     <td style="text-align: center;"><a href="#" style="color: chocolate;">Convert to invoice</a></td>
                   {% else %}
@@ -194,7 +196,12 @@
         {% endfor %}
       </tbody>
     </table>
-    <div id="totalDisplay" class="mt-3"></div>
+    <div id="totalDisplay" class="mt-3" style="font-size: 20px;">
+      Total Sales Amount: <span id="totalSalesAmount"></span>
+      <br>Total Orders Displayed: <span id="orderCountDisplay"></span>
+     
+  </div>
+
   </div>
 
 
@@ -207,72 +214,174 @@
       
       // Set the minimum allowed date for the end date input
       endDateInput.min = startDateInput.value;
-      calculateAndDisplayTotal()
+      
   }
 </script>
 
 
 <script>
-  function ApplyDateFilter() {
-    updateEndDateMin()
-    var fromDate = new Date(document.getElementById('fromdate').value);
-    var toDate = new Date(document.getElementById('todate').value);
+function displaySalesOrderCount() {
+  const allRows = document.querySelectorAll('#myTable tbody tr');
+  let count = 0;
 
-    // Set the time part to the beginning and end of the day
-    fromDate.setHours(0, 0, 0, 0);
-    toDate.setHours(23, 59, 59, 999);
+  allRows.forEach(row => {
+    // Check if the row is visible (displayed)
+    if (getComputedStyle(row).display !== 'none') {
+      count++;
+    }
+  });
+
+  const countDisplay = document.getElementById('orderCountDisplay');
+  if (countDisplay) {
+    countDisplay.textContent = count;
+  }
+}
+
+function initializePageContent() {
+  // Call function to display count of all orders initially
+  displaySalesOrderCount();
+}
+
+document.addEventListener('DOMContentLoaded', initializePageContent);
+
+// Rest of your existing code...
+
+
+
+
+
+  function ApplyDateFilter() {
+    updateEndDateMin();
+
+    const fromDateValue = document.getElementById('fromdate').value;
+    const toDateValue = document.getElementById('todate').value;
+
+    var fromDate = fromDateValue ? new Date(fromDateValue) : null;
+    var toDate = toDateValue ? new Date(toDateValue) : null;
 
     var table = document.getElementById("myTable");
     var tr = table.getElementsByTagName("tr");
 
     for (var i = 1; i < tr.length; i++) {
-      var row = tr[i];
-      var td = row.getElementsByTagName("td")[0]; // Assuming the date is in the first column.
+        var row = tr[i];
+        var td = row.getElementsByTagName("td")[0]; // Assuming the date is in the first column.
 
-      if (td) {
-        var txtValue = td.textContent || td.innerText;
-        var check = new Date(txtValue);
+        if (td) {
+            var txtValue = td.textContent || td.innerText;
+            var check = new Date(txtValue);
 
-        // Set the time part of check to match the format of fromDate and toDate
-        check.setHours(0, 0, 0, 0);
-
-        if (check >= fromDate && check <= toDate) {
-          row.style.display = "";
-        } else {
-          row.style.display = "none";
+            if ((!fromDate && !toDate) || (check >= fromDate && check <= toDate)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
         }
-      }
     }
+
+    var dateRangeText = '';
+    if (fromDate && toDate) {
+        var start = fromDate;
+        var end = toDate;
+        dateRangeText = 'From ' + start.toDateString() + ' to ' + end.toDateString();
+    } else {
+        dateRangeText = 'All Dates';
+    }
+
     // Update the selectedEndDate div
-    var start = fromDate;
-    var end = toDate;
-    document.getElementById('selectedEndDate').textContent = 'From ' + start.toDateString() + ' to ' + end.toDateString();
-    calculateAndDisplayTotal();
-  }
+    document.getElementById('selectedEndDate').textContent = dateRangeText;
+
+    // Calculate and display the total sales amount
+    const totalSalesAmountDisplayed = calculateTotalSalesAmountDisplayed();
+    document.getElementById('totalSalesAmount').textContent = "" + totalSalesAmountDisplayed.toFixed(2);
+    displaySalesOrderCount();
+    
+}
+
+// Function to calculate total sales amount based on displayed rows after date filtering
+function calculateTotalSalesAmountDisplayed() {
+    let totalAmount = 0;
+    const table = document.getElementById("myTable");
+    const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+    for (let i = 0; i < rows.length; i++) {
+        if (rows[i].style.display !== "none") {
+            const totalValue = parseFloat(rows[i].getElementsByTagName("td")[5].innerText);
+            totalAmount += totalValue;
+        }
+    }
+
+    return totalAmount;
+}
+
+// Add event listeners to the date inputs to trigger ApplyDateFilter on change
+document.getElementById('fromdate').addEventListener('change', ApplyDateFilter);
+document.getElementById('todate').addEventListener('change', ApplyDateFilter);
+
+// Initialize the filter when the page loads (optional)
+ApplyDateFilter();
+
+//original
+  // function ApplyDateFilter() {
+  //   updateEndDateMin()
+  //   var fromDate = new Date(document.getElementById('fromdate').value);
+  //   var toDate = new Date(document.getElementById('todate').value);
+
+  //   // Set the time part to the beginning and end of the day
+  //   fromDate.setHours(0, 0, 0, 0);
+  //   toDate.setHours(23, 59, 59, 999);
+
+  //   var table = document.getElementById("myTable");
+  //   var tr = table.getElementsByTagName("tr");
+
+  //   for (var i = 1; i < tr.length; i++) {
+  //     var row = tr[i];
+  //     var td = row.getElementsByTagName("td")[0]; // Assuming the date is in the first column.
+
+  //     if (td) {
+  //       var txtValue = td.textContent || td.innerText;
+  //       var check = new Date(txtValue);
+
+  //       // Set the time part of check to match the format of fromDate and toDate
+  //       check.setHours(0, 0, 0, 0);
+
+  //       if (check >= fromDate && check <= toDate) {
+  //         row.style.display = "";
+  //       } else {
+  //         row.style.display = "none";
+  //       }
+  //     }
+  //   }
+  //   // Update the selectedEndDate div
+  //   var start = fromDate;
+  //   var end = toDate;
+  //   document.getElementById('selectedEndDate').textContent = 'From ' + start.toDateString() + ' to ' + end.toDateString();
+    
+    
+    
+  
+  // }
 
   // Add event listeners to the date inputs to trigger ApplyDateFilter on change
-  document.getElementById('fromdate').addEventListener('change', ApplyDateFilter);
-  document.getElementById('todate').addEventListener('change', ApplyDateFilter);
+  // document.getElementById('fromdate').addEventListener('change', ApplyDateFilter);
+  // document.getElementById('todate').addEventListener('change', ApplyDateFilter);
 
-  // Initialize the filter when the page loads (optional)
-  ApplyDateFilter();
+  // // Initialize the filter when the page loads (optional)
+  // ApplyDateFilter();
 
   // Function to show full table when no dates are selected
-  function ShowFullTable() {
-    var table = document.getElementById("myTable");
-    var tr = table.getElementsByTagName("tr");
+//   function ShowFullTable() {
+//     var table = document.getElementById("myTable");
+//     var tr = table.getElementsByTagName("tr");
 
-    for (var i = 1; i < tr.length; i++) {
-      tr[i].style.display = "";
-    }
+//     for (var i = 1; i < tr.length; i++) {
+//         tr[i].style.display = "";
+//     }
 
-    // Reset the selectedEndDate div
-    document.getElementById('selectedEndDate').textContent = '';
-   
-  }
+    
+// }
 
-  // Call the function to show full table initially
-  ShowFullTable();
+ 
+
 </script>
 
 <script>
@@ -287,6 +396,7 @@ $('body').append($printerDiv).addClass("printingContent"); // add the div to bod
 window.print(); // call print
 $printerDiv.remove(); // remove the div
 $('body').removeClass("printingContent");
+
   }
 </script>
 
@@ -352,46 +462,80 @@ $('body').removeClass("printingContent");
   </script>
 
 <script>
+  
   const searchInput = document.getElementById('searchInput');
-  const nameTooltip = document.getElementById('nameTooltip');
-  const dataTable = document.getElementById('myTable');
-  const tableBody = dataTable.getElementsByTagName('tbody')[0];
-  const initialTableData = [...tableBody.querySelectorAll('tr')];
+    const tableRows = document.querySelectorAll('#myTable tbody tr');
 
-  searchInput.addEventListener('click', showTooltip);
-  searchInput.addEventListener('keyup', filterTooltip);
-  nameTooltip.addEventListener('click', filterTable);
+    searchInput.addEventListener('input', function () {
+        const searchText = searchInput.value.toLowerCase();
 
-  function showTooltip(){
-      nameTooltip.style.display = 'block';
-  }
+        let totalAmount = 0;
 
-  function filterTooltip() {
-            const searchText = searchInput.value.toLowerCase();
-    
-            // Show the tooltip if there's text in the input
-            if (searchText.length > 0) {
-                nameTooltip.style.top = (searchInput.offsetTop + searchInput.offsetHeight) + 'px';
-                nameTooltip.style.left = searchInput.offsetLeft + 'px';
-            } else {
-              nameTooltip.style.display = 'block';
-                // If search input is empty, restore the initial table
-                restoreInitialTable();
-            }
-    
-            // Filter the tooltip items based on the input
-            const items = nameTooltip.getElementsByClassName('tooltip-item');
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                const itemName = item.textContent.toLowerCase();
-                if (itemName.includes(searchText)) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
+        tableRows.forEach(row => {
+            let rowContainsSearchText = false;
+
+            row.querySelectorAll('td').forEach(cell => {
+                if (cell.textContent.toLowerCase().includes(searchText)) {
+                    rowContainsSearchText = true;
                 }
+            });
+
+            if (rowContainsSearchText) {
+                row.style.display = '';
+                const totalValue = parseFloat(row.querySelector('td:nth-child(6)').innerText);
+                if (!isNaN(totalValue)) {
+                    totalAmount += totalValue;
+                }
+            } else {
+                row.style.display = 'none';
             }
+        });
+
+        // Display the updated total sales amount
+        document.getElementById('totalSalesAmount').textContent = "" + totalAmount.toFixed(2);
+        displaySalesOrderCount();
+    });
+
+  // const searchInput = document.getElementById('searchInput');
+  // const nameTooltip = document.getElementById('nameTooltip');
+  // const dataTable = document.getElementById('myTable');
+  // const tableBody = dataTable.getElementsByTagName('tbody')[0];
+  // const initialTableData = [...tableBody.querySelectorAll('tr')];
+
+  // searchInput.addEventListener('click', showTooltip);
+  // searchInput.addEventListener('keyup', filterTooltip);
+  // nameTooltip.addEventListener('click', filterTable);
+
+  // function showTooltip(){
+  //     nameTooltip.style.display = 'block';
+  // }
+
+  // function filterTooltip() {
+  //           const searchText = searchInput.value.toLowerCase();
+    
+  //           // Show the tooltip if there's text in the input
+  //           if (searchText.length > 0) {
+  //               nameTooltip.style.top = (searchInput.offsetTop + searchInput.offsetHeight) + 'px';
+  //               nameTooltip.style.left = searchInput.offsetLeft + 'px';
+  //           } else {
+  //             nameTooltip.style.display = 'block';
+  //               // If search input is empty, restore the initial table
+  //               restoreInitialTable();
+  //           }
+    
+  //           // Filter the tooltip items based on the input
+  //           const items = nameTooltip.getElementsByClassName('tooltip-item');
+  //           for (let i = 0; i < items.length; i++) {
+  //               const item = items[i];
+  //               const itemName = item.textContent.toLowerCase();
+  //               if (itemName.includes(searchText)) {
+  //                   item.style.display = 'block';
+  //               } else {
+  //                   item.style.display = 'none';
+  //               }
+  //           }
            
-        }
+  //       }
 
   function filterTable(event) {
       if (event.target.classList.contains('tooltip-item')) {
@@ -435,26 +579,24 @@ document.addEventListener("click", function(event) {
   }
 });
 
+//share
+$(document).ready(function() {
+    $(".share-dropdown button").click(function(e) {
+        e.stopPropagation(); // Prevent the click event from propagating to the document
+        $(this).next(".share-dropdown-menu").slideToggle("fast");
+    });
+
+    $(document).on("click", function(event) {
+        if (!$(event.target).closest(".share-dropdown").length) {
+            $(".share-dropdown-menu").slideUp("fast");
+        }
+    });
+});
 
 
-// function calculateAndDisplayTotal() {
-//     const table = document.getElementById('myTable');
-//     const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-//     let total = 0;
-
-//     for (let i = 0; i < rows.length; i++) {
-//         if (rows[i].style.display !== 'none') {
-//             const cell = rows[i].getElementsByTagName('td')[5]; // Assuming 'Total' is the 6th column (index 5)
-//             total += parseFloat(cell.textContent);
-//         }
-//     }
-
-//     const totalDisplay = document.getElementById('totalDisplay');
-//     totalDisplay.innerHTML = `<strong>Total: ${total}</strong>`;
-// }
+</script>
 
 
-</script>  
 
 {% endblock content %}
 

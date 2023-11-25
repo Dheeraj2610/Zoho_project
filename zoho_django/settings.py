@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'silk',
     'bootstrap_datepicker_plus',
     'mathfilters',
+    'django_social_share',
 ]
 
 MIDDLEWARE = [
