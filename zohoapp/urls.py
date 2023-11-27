@@ -480,9 +480,6 @@ urlpatterns = [
     path('sales_summery', views.sales_summery, name='sales_summery'),
     path('transaction/<int:pk>', views.transaction, name="transaction"),
 
-
-    path('sales_order_details', views.sales_order_details, name='sales_order_details'),
-    
     path('view_sales_order_all',views.view_sales_order_all,name='view_sales_order_all'),
     path('view_sales_order_Draft',views.view_sales_order_Draft,name='view_sales_order_Draft'),
     path('view_sales_order_approved',views.view_sales_order_approved,name='view_sales_order_approved'),
@@ -976,6 +973,11 @@ urlpatterns = [
     path('payment_delete_details/', views.payment_delete_details, name='payment_delete_details'),
     
     re_path(r'^static/(?P<path>.*)$', serve,{'document_root': settings.STATIC_ROOT}),
+
+    path('sales_order_details', views.sales_order_details, name='sales_order_details'),
+    path('retainer_invoice_details', views.retainer_invoice_details, name='retainer_invoice_details'),
+    path('estimate_details', views.estimate_details, name='estimate_details'),
+    path('vendor_credits_details',views.vendor_credits_details,name='vendor_credits_details'), 
     
     
     

@@ -142,7 +142,7 @@
         {% else %}
           <a class="text" style="font-size: 1rem; color: white;">Add Company</a><br>
         {% endif %}
-        <a class="text" style="font-size: 1.5rem; color: white;">Sale Order Details</a><br>
+        <a class="text" style="font-size: 1.5rem; color: white;">Vendor Credit Details</a><br>
         <h5 class="text" id="selectedEndDate"></h5><br>
       </div>
     </center>   
@@ -152,44 +152,31 @@
     <table class="table text-white" id="myTable">
       <thead >
         <tr style="text-align: center;">
-          <th>DATE 
-          </th>
-          <th>ORDER NO 
-          </th>
-          <th>NAME 
-          </th>
-          <th>DUE DATE 
-          </th>
-          <th>STATUS 
-          </th>
-
-          <th>Amount 
-          </th>
-          <th>ACTION 
-          </th>
+          <th>DATE </th>
+          <th>VENDOR CREDIT NUMBER</th>
+          <th>VENDOR NAME</th>
+          <th>AMOUNT</th>
+          <th>STATUS</th>
+          <th>BALANCE</th>
+          
         
         </tr>
       </thead>
 
       <tbody style="text-align: center;">
-        {% for d in data %}
+        {% for r in recur_bill %}
         <tr>
-          <td>{{ d.sales_date }}</td>
-          <td>{{ d.sales_no }}</td>
-          <td>{{ d.customer.customerName }}</td>
-          <td>{{ d.ship_date }}</td>
-          <!-- {% if d.complete_status == 1 %}
-            <td>Invoice</td>
-            {% else %}
-            <td>Sales Order</td>
-            {% endif %} -->
-            <td>{{ d.status }}</td>
-          <td id="grand">{{ d.grandtotal }}</td>
-          {% if d.complete_status == 0 %}
-                    <td style="text-align: center;"><a href="#" style="color: chocolate;">Convert to invoice</a></td>
-                  {% else %}
-                    <td style="text-align: center; color: green;">Completed</td>
-                  {% endif %}
+          <td>{{ r.vendor_date }}</td>
+          <td>{{r.id}}</td>
+          <td>
+            <span>{{ r.vendor_name.split.0 }}</span>
+            <span>{{ r.vendor_name.split.1 }}</span>
+            <span style="display: none;">{{ r.vendor_name.split.2 }}</span>
+        </td>
+          <td>₹{{r.tax_amount}}</td>
+          <td></td>
+          <td></td>
+          
           
         </tr>
         
@@ -197,8 +184,8 @@
       </tbody>
     </table>
     <div id="totalDisplay" class="mt-3" style="font-size: 20px;">
-      Total Sales Amount: <span id="totalSalesAmount"></span>
-      <br>Total Orders Displayed: <span id="orderCountDisplay"></span>
+      Total Amount:<span id="totalEstimateAmount"></span>
+      <br>Total Estimates: <span id="orderCountDisplay"></span>
      
   </div>
 
@@ -220,28 +207,59 @@
 
 
 <script>
-function displaySalesOrderCount() {
-  const allRows = document.querySelectorAll('#myTable tbody tr');
-  let count = 0;
 
-  allRows.forEach(row => {
-    // Check if the row is visible (displayed)
-    if (getComputedStyle(row).display !== 'none') {
-      count++;
-    }
-  });
+function calculateTotalDisplayedAmount() {
+    const displayedRows = document.querySelectorAll('#myTable tbody tr[style=""]'); // Select visible rows
 
-  const countDisplay = document.getElementById('orderCountDisplay');
-  if (countDisplay) {
-    countDisplay.textContent = count;
-  }
+    let totalAmount = 0;
+
+    displayedRows.forEach(row => {
+        const amountCell = row.querySelector('td:nth-child(4)'); // Assuming 'Amount' column is the fifth column
+        if (amountCell) {
+            const amountText = amountCell.textContent.trim().replace('₹', ''); // Extract text and remove currency symbol
+            console.log('Amount Text:', amountText); // Check extracted amount text
+            const amountValue = parseFloat(amountText);
+
+            if (!isNaN(amountValue)) {
+                totalAmount += amountValue;
+            }
+        }
+    });
+
+    console.log('Total Amount:', totalAmount); // Check total amount
+    return totalAmount;
 }
+
+
+function displayTotalAmount() {
+    const totalDisplayedAmount = calculateTotalDisplayedAmount();
+    document.getElementById('totalEstimateAmount').textContent = '₹' + totalDisplayedAmount.toFixed(2);
+}
+
+        function displayInvoiceOrderCount() {
+        const allRows = document.querySelectorAll('#myTable tbody tr');
+        let count = 0;
+
+        allRows.forEach(row => {
+            // Check if the row is visible (displayed)
+            if (getComputedStyle(row).display !== 'none') {
+                count++;
+            }
+        });
+
+        const countDisplay = document.getElementById('orderCountDisplay');
+        if (countDisplay) {
+            countDisplay.textContent = count;
+        }
+        displayTotalAmount();
+    
+}
+
 
 function initializePageContent() {
   // Call function to display count of all orders initially
-  const totalSalesAmountDisplayed = calculateTotalSalesAmountDisplayed();
-  document.getElementById('totalSalesAmount').textContent = "" + totalSalesAmountDisplayed.toFixed(2);
-  displaySalesOrderCount();
+  displayInvoiceOrderCount();
+  displayTotalAmount();
 }
 
 document.addEventListener('DOMContentLoaded', initializePageContent);
@@ -250,6 +268,22 @@ document.addEventListener('DOMContentLoaded', initializePageContent);
 
 
 
+
+function updateEndDateMin() {
+    const startDateInput = document.getElementById('fromdate');
+    const endDateInput = document.getElementById('todate');
+    
+    // Set the minimum allowed date for the end date input
+    endDateInput.min = startDateInput.value;
+}
+
+function updateEndDateMin() {
+    const startDateInput = document.getElementById('fromdate');
+    const endDateInput = document.getElementById('todate');
+    
+    // Set the minimum allowed date for the end date input
+    endDateInput.min = startDateInput.value;
+}
 
 
 
@@ -287,31 +321,9 @@ function ApplyDateFilter() {
     var start = fromDate;
     var end = toDate;
     document.getElementById('selectedEndDate').textContent = 'From ' + start.toDateString() + ' to ' + end.toDateString();
-   
-    const totalSalesAmountDisplayed = calculateTotalSalesAmountDisplayed();
-    document.getElementById('totalSalesAmount').textContent = "" + totalSalesAmountDisplayed.toFixed(2);
-    displaySalesOrderCount();
+    displayTotalAmount();
+    displayInvoiceOrderCount()
   }
-
-  
-
-// Function to calculate total sales amount based on displayed rows after date filtering
-function calculateTotalSalesAmountDisplayed() {
-let totalAmount = 0;
-const table = document.getElementById("myTable");
-const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-
-for (let i = 0; i < rows.length; i++) {
-    if (rows[i].style.display !== "none") {
-        const totalValue = parseFloat(rows[i].getElementsByTagName("td")[5].innerText);
-        totalAmount += totalValue;
-    }
-}
-
-return totalAmount;
-}
-
-
 
   // Add event listeners to the date inputs to trigger ApplyDateFilter on change
   document.getElementById('fromdate').addEventListener('change', ApplyDateFilter);
@@ -335,10 +347,6 @@ return totalAmount;
 
   // Call the function to show full table initially
   ShowFullTable();
-
-
-
- 
 
 </script>
 
@@ -450,8 +458,9 @@ $('body').removeClass("printingContent");
         });
 
         // Display the updated total sales amount
-        document.getElementById('totalSalesAmount').textContent = "" + totalAmount.toFixed(2);
-        displaySalesOrderCount();
+        
+        
+        displayInvoiceOrderCount();
     });
 
   
@@ -513,6 +522,8 @@ $(document).ready(function() {
         }
     });
 });
+
+
 
 </script>
 

@@ -142,7 +142,7 @@
         {% else %}
           <a class="text" style="font-size: 1rem; color: white;">Add Company</a><br>
         {% endif %}
-        <a class="text" style="font-size: 1.5rem; color: white;">Sale Order Details</a><br>
+        <a class="text" style="font-size: 1.5rem; color: white;">Estimate Details</a><br>
         <h5 class="text" id="selectedEndDate"></h5><br>
       </div>
     </center>   
@@ -152,44 +152,47 @@
     <table class="table text-white" id="myTable">
       <thead >
         <tr style="text-align: center;">
-          <th>DATE 
-          </th>
-          <th>ORDER NO 
-          </th>
-          <th>NAME 
-          </th>
-          <th>DUE DATE 
-          </th>
-          <th>STATUS 
-          </th>
-
-          <th>Amount 
-          </th>
-          <th>ACTION 
-          </th>
+          <th>DATE </th>
+          <th>ESTIMATE NUMBER</th>
+          <th>EXPIRY DATE</th>
+          <th>CUSTOMER NAME</th>
+          <th>AMOUNT</th>
+          <th>STATUS</th>
+          <th>ACTION</th>
+          
         
         </tr>
       </thead>
 
       <tbody style="text-align: center;">
-        {% for d in data %}
+        {% for e in estimates %}
         <tr>
-          <td>{{ d.sales_date }}</td>
-          <td>{{ d.sales_no }}</td>
-          <td>{{ d.customer.customerName }}</td>
-          <td>{{ d.ship_date }}</td>
-          <!-- {% if d.complete_status == 1 %}
-            <td>Invoice</td>
+          <td>{{ e.estimate_date }}</td>
+          <td>{{e.estimate_no}}</td>
+          <td>{{e.expiry_date}}</td>
+          <td>{{e.customer_name}}</td>
+          <td>₹{{e.total}}</td>
+          <td>{{e.status}}</td>
+          <td>
+            {% if e.convert_sales == 'converted' %}
+              <span style="color: rgb(17, 191, 69);;">Converted to sales</span>
+            {% elif e.convert_invoice == 'converted' %}
+              <span style="color: rgb(17, 191, 69);">Converted to Invoice</span>
             {% else %}
-            <td>Sales Order</td>
-            {% endif %} -->
-            <td>{{ d.status }}</td>
-          <td id="grand">{{ d.grandtotal }}</td>
-          {% if d.complete_status == 0 %}
-                    <td style="text-align: center;"><a href="#" style="color: chocolate;">Convert to invoice</a></td>
-                  {% else %}
-                    <td style="text-align: center; color: green;">Completed</td>
-                  {% endif %}
+             <span style="color: chocolate;"> Not Converted </span>
+            {% endif %}
+          </td>
+          <!-- {% if estimate.convert_sales == 'converted' %}
+          <td style="color: rgb(3, 82, 3);">Done</td>
+          {% else %}
+          <td style="color: rgb(158, 2, 2);">Not Done</td>
+          {% endif %}
+
+          {% if estimate.convert_invoice == 'converted' %}
+          <td style="color: rgb(3, 82, 3);">Done</td>
+          {% else %}
+          <td style="color: rgb(158, 2, 2);">Not Done</td>
+          {% endif %} -->
           
         </tr>
         
@@ -197,8 +200,8 @@
       </tbody>
     </table>
     <div id="totalDisplay" class="mt-3" style="font-size: 20px;">
-      Total Sales Amount: <span id="totalSalesAmount"></span>
-      <br>Total Orders Displayed: <span id="orderCountDisplay"></span>
+      Total Amount:<span id="totalEstimateAmount"></span>
+      <br>Total Estimates: <span id="orderCountDisplay"></span>
      
   </div>
 
@@ -220,28 +223,56 @@
 
 
 <script>
-function displaySalesOrderCount() {
-  const allRows = document.querySelectorAll('#myTable tbody tr');
-  let count = 0;
 
-  allRows.forEach(row => {
-    // Check if the row is visible (displayed)
-    if (getComputedStyle(row).display !== 'none') {
-      count++;
-    }
-  });
+function calculateTotalDisplayedAmount() {
+    const displayedRows = document.querySelectorAll('#myTable tbody tr[style=""]'); // Select visible rows
 
-  const countDisplay = document.getElementById('orderCountDisplay');
-  if (countDisplay) {
-    countDisplay.textContent = count;
-  }
+    let totalAmount = 0;
+
+    displayedRows.forEach(row => {
+        const amountCell = row.querySelector('td:nth-child(5)'); // Assuming 'Amount' column is the fifth column
+        if (amountCell) {
+            const amountText = amountCell.textContent.trim().replace('₹', ''); // Extract text and remove currency symbol
+            const amountValue = parseFloat(amountText);
+
+            if (!isNaN(amountValue)) {
+                totalAmount += amountValue;
+            }
+        }
+    });
+
+    return totalAmount;
 }
+
+function displayTotalAmount() {
+    const totalDisplayedAmount = calculateTotalDisplayedAmount();
+    document.getElementById('totalEstimateAmount').textContent = '₹' + totalDisplayedAmount.toFixed(2);
+}
+
+        function displayInvoiceOrderCount() {
+        const allRows = document.querySelectorAll('#myTable tbody tr');
+        let count = 0;
+
+        allRows.forEach(row => {
+            // Check if the row is visible (displayed)
+            if (getComputedStyle(row).display !== 'none') {
+                count++;
+            }
+        });
+
+        const countDisplay = document.getElementById('orderCountDisplay');
+        if (countDisplay) {
+            countDisplay.textContent = count;
+        }
+        displayTotalAmount();
+    
+}
+
 
 function initializePageContent() {
   // Call function to display count of all orders initially
-  const totalSalesAmountDisplayed = calculateTotalSalesAmountDisplayed();
-  document.getElementById('totalSalesAmount').textContent = "" + totalSalesAmountDisplayed.toFixed(2);
-  displaySalesOrderCount();
+  displayInvoiceOrderCount();
+  displayTotalAmount();
 }
 
 document.addEventListener('DOMContentLoaded', initializePageContent);
@@ -250,6 +281,22 @@ document.addEventListener('DOMContentLoaded', initializePageContent);
 
 
 
+
+function updateEndDateMin() {
+    const startDateInput = document.getElementById('fromdate');
+    const endDateInput = document.getElementById('todate');
+    
+    // Set the minimum allowed date for the end date input
+    endDateInput.min = startDateInput.value;
+}
+
+function updateEndDateMin() {
+    const startDateInput = document.getElementById('fromdate');
+    const endDateInput = document.getElementById('todate');
+    
+    // Set the minimum allowed date for the end date input
+    endDateInput.min = startDateInput.value;
+}
 
 
 
@@ -287,31 +334,9 @@ function ApplyDateFilter() {
     var start = fromDate;
     var end = toDate;
     document.getElementById('selectedEndDate').textContent = 'From ' + start.toDateString() + ' to ' + end.toDateString();
-   
-    const totalSalesAmountDisplayed = calculateTotalSalesAmountDisplayed();
-    document.getElementById('totalSalesAmount').textContent = "" + totalSalesAmountDisplayed.toFixed(2);
-    displaySalesOrderCount();
+    displayTotalAmount();
+    displayInvoiceOrderCount()
   }
-
-  
-
-// Function to calculate total sales amount based on displayed rows after date filtering
-function calculateTotalSalesAmountDisplayed() {
-let totalAmount = 0;
-const table = document.getElementById("myTable");
-const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-
-for (let i = 0; i < rows.length; i++) {
-    if (rows[i].style.display !== "none") {
-        const totalValue = parseFloat(rows[i].getElementsByTagName("td")[5].innerText);
-        totalAmount += totalValue;
-    }
-}
-
-return totalAmount;
-}
-
-
 
   // Add event listeners to the date inputs to trigger ApplyDateFilter on change
   document.getElementById('fromdate').addEventListener('change', ApplyDateFilter);
@@ -335,10 +360,6 @@ return totalAmount;
 
   // Call the function to show full table initially
   ShowFullTable();
-
-
-
- 
 
 </script>
 
@@ -450,8 +471,9 @@ $('body').removeClass("printingContent");
         });
 
         // Display the updated total sales amount
-        document.getElementById('totalSalesAmount').textContent = "" + totalAmount.toFixed(2);
-        displaySalesOrderCount();
+        
+        
+        displayInvoiceOrderCount();
     });
 
   
@@ -513,6 +535,8 @@ $(document).ready(function() {
         }
     });
 });
+
+
 
 </script>
 

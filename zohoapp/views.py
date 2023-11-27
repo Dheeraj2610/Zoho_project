@@ -20858,3 +20858,42 @@ def sales_order_details(request):
         if item.customerName[3:] not in name_list:
             name_list.append(item.customerName[3:])
     return render(request, 'sales_order_details.html',{'data':data, 'company': company,'name_list':name_list})
+
+
+
+def retainer_invoice_details(request):
+    company=company_details.objects.get(user=request.user)
+    invoices=RetainerInvoice.objects.all().order_by('-id')
+    context={'invoices':invoices,'company':company}
+    return render(request,'retainer_invoice_details.html',context)
+
+def estimate_details(request):
+    user = request.user
+    estimates = Estimates.objects.filter(user=user).order_by('-id')
+    company = company_details.objects.get(user=user)
+    context = {
+        'estimates': estimates,
+        'company': company,
+    }
+    # for i in estimates:
+    #     print(i)
+
+    return render(request, 'estimate_details.html', context)
+
+#@login_required(login_url='login')
+def vendor_credits_details(request):
+
+    company = company_details.objects.get(user = request.user)
+    recur = Vendor_Credits_Bills.objects.filter(user = request.user.id).values()
+    for r in recur:
+        vn = r['vendor_name'].split()[1:]
+        r['vend_name'] = " ".join(vn)
+        
+
+    sorted_recur = sorted(recur, key=lambda r: r['vendor_name'],reverse=True) 
+
+    context = {
+                'company' : company,
+                'recur_bill' : sorted_recur
+            }
+    return render(request,'vendor_credit_details.html',context)
